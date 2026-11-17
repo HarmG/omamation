@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/HarmG/omamation/schema/automation.schema.json",
+  "title": "Omamation automation",
+  "description": "One automation: when it starts (triggers), whether it may run (conditions), what it does (actions), and what happens when a step fails (on_error). Block options are checked against each block's own schema; see `omamation blocks`.",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "triggers", "actions"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$", "description": "File name and the name used on the command line"},
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+    "enabled": {"type": "boolean", "default": true},
+    "triggers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/trigger"}},
+    "conditions": {"type": "array", "items": {"$ref": "#/$defs/condition"}},
+    "actions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/action"}},
+    "on_error": {"type": "array", "items": {"$ref": "#/$defs/action"}, "description": "The catch: runs when a step in actions fails"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$"},
+    "duration": {"type": "string", "pattern": "^\\d+(s|m|h)$"},
+    "trigger": {
+      "type": "object",
+      "required": ["id", "trigger"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "trigger": {"type": "string"},
+        "with": {"type": "object"}
+      }
+    },
+    "condition": {
+      "type": "object",
+      "required": ["id", "condition"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "condition": {"type": "string"},
+        "with": {"type": "object"}
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["id", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "action": {"type": "string"},
+        "with": {"type": "object"},
+        "timeout": {"$ref": "#/$defs/duration"},
+        "retry": {"type": "integer", "minimum": 0, "maximum": 10},
+        "retry_delay": {"$ref": "#/$defs/duration"}
+      }
+    }
+  }
+}

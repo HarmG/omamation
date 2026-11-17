@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/HarmG/omamation/main/src/omamation/schema/automation.schema.json",
+  "schema_version": 1,
+  "id": "teams-recording-start",
+  "name": "Teams recording start",
+  "description": "Starts a Voxtype meeting recording when a Teams meeting starts.",
+  "triggers": [
+    {"id": "mic", "trigger": "microphone_in_use", "with": {"app": "Chromium", "for": "20s"}}
+  ],
+  "conditions": [
+    {"id": "teams_open", "condition": "window_open", "with": {"class": "chrome-teams.cloud.microsoft__-Default"}},
+    {"id": "not_recording", "condition": "voxtype_meeting", "with": {"state": "idle"}}
+  ],
+  "actions": [
+    {"id": "record", "action": "voxtype_meeting_start", "with": {"title": "Teams {{ trigger.time }}"}, "timeout": "30s"},
+    {"id": "tell", "action": "notify", "with": {
+      "title": "Recording started",
+      "body": "{{ steps.record.title }}",
+      "buttons": [{"label": "Stop", "run": "teams-recording-stop"}]
+    }}
+  ]
+}

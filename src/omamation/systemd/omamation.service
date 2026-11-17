@@ -1,0 +1,14 @@
+[Unit]
+Description=Omamation automation engine
+Documentation=https://github.com/HarmG/omamation
+After=graphical-session.target pipewire.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=@EXEC_START@
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omamation"
+version = "0.1.0"
+description = "A small automation engine for Omarchy: triggers, conditions and actions as JSON, run by a daemon, driven from a CLI and a bar widget."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4"]
+
+[project.scripts]
+omamation = "omamation.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+omamation = ["schema/*.json", "plugin/*", "skill/*", "systemd/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

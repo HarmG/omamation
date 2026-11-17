@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/HarmG/omamation/main/src/omamation/schema/automation.schema.json",
+  "schema_version": 1,
+  "id": "teams-recording-stop",
+  "name": "Teams recording stop",
+  "description": "Stops the Voxtype meeting recording when the Teams meeting ends, and saves the transcript.",
+  "triggers": [
+    {"id": "mic_free", "trigger": "microphone_released", "with": {"app": "Chromium", "for": "60s"}},
+    {"id": "by_hand", "trigger": "manual"}
+  ],
+  "conditions": [
+    {"id": "recording", "condition": "voxtype_meeting", "with": {"state": "recording"}}
+  ],
+  "actions": [
+    {"id": "stop", "action": "voxtype_meeting_stop", "with": {"folder": "~/Meetings"}},
+    {"id": "tell", "action": "notify", "with": {"title": "Transcript saved", "body": "{{ steps.stop.file }}"}}
+  ]
+}
