@@ -237,10 +237,21 @@ def cmd_setup(args):
 
 def cmd_skill(args):
     target = Path(args.dir).expanduser() / "omamation"
-    target.mkdir(parents=True, exist_ok=True)
-    source = package_dir("skill").joinpath("SKILL.md")
-    (target / "SKILL.md").write_text(source.read_text())
-    out(args, {"installed": str(target / "SKILL.md")}, f"Installed the skill at {target / 'SKILL.md'}.")
+    source = package_dir("skill")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_symlink():
+        target.unlink()
+    elif target.exists():
+        raise Failure(f"{target} exists and is not a link; remove it first")
+    if args.copy:
+        target.mkdir()
+        (target / "SKILL.md").write_text(source.joinpath("SKILL.md").read_text())
+        how = "Copied"
+    else:
+        # A link follows the installed package, so the skill always matches this version.
+        target.symlink_to(source)
+        how = "Linked"
+    out(args, {"installed": str(target), "linked": not args.copy}, f"{how} the skill at {target}.")
 
 
 # ------------------------------------------------------------------- parser
@@ -287,7 +298,8 @@ def parser() -> argparse.ArgumentParser:
     skill = command("skill", None, "agent skill")
     skill_sub = skill.add_subparsers(dest="skill_command", required=True)
     install = skill_sub.add_parser("install", help="install the agent skill")
-    install.add_argument("--dir", required=True, help="skills folder, e.g. ~/.claude/skills")
+    install.add_argument("--dir", default="~/.claude/skills", help="skills folder (default ~/.claude/skills)")
+    install.add_argument("--copy", action="store_true", help="copy instead of linking to the installed package")
     install.add_argument("--json", action="store_true")
     install.set_defaults(func=cmd_skill)
     return p

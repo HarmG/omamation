@@ -85,7 +85,7 @@ automations stay.
 | `omamation trace <id>` | the last run, step by step |
 | `omamation daemon [--dry-run]` | the engine; dry run only writes traces |
 | `omamation setup [--remove]` | user service and bar widget |
-| `omamation skill install --dir <skills>` | install the agent skill |
+| `omamation skill install [--dir <skills>]` | link the agent skill into `~/.claude/skills` (follows updates) |
 
 Every command takes `--json`, exits 0 or 1, and prints errors on stderr.
 
