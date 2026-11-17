@@ -27,8 +27,8 @@ uv tool install git+https://github.com/HarmG/omamation
 omamation setup          # user service + bar widget link
 ```
 
-Then add **Omamation** to the bar (Setup > Bar) or restart the shell
-(`omarchy restart shell`). `omamation setup --remove` undoes it; your
+Then put **Omamation** in the bar with `omarchy bar put omamation`.
+`omamation setup --remove` undoes it; your
 automations stay.
 
 ## How it works
