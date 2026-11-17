@@ -30,7 +30,10 @@ Work only through the `omamation` command; never edit the data folder.
    a Trace button), or write your own list of actions.
 5. For a schedule use the `schedule` trigger (`at` or `every`, `days`, `missed`);
    add the condition `not_ran_today` for "once a day, at the first chance".
-6. `omamation validate <file>`, then `omamation save <file> --by agent`.
+6. Blocks marked with an `integration` (e.g. `m365`: `calendar_event`,
+   `calendar_now`) need that integration set up; `omamation m365 events` shows
+   what the calendar integration sees.
+7. `omamation validate <file>`, then `omamation save <file> --by agent`.
 
 ## Rules
 - What an agent saves is a **concept**: it does not run until the user clicks

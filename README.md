@@ -75,6 +75,42 @@ automations stay.
 | action | `voxtype_meeting_start` | `title` |
 | action | `voxtype_meeting_stop` | `folder` (default `~/Meetings`) |
 
+## Integrations
+
+An integration adds blocks for one service. Its settings live in
+`~/.config/omamation/integrations.json`; `omamation blocks` marks its blocks.
+
+### m365 (Outlook calendar, read only)
+
+Install with the extra: `uv tool install 'omamation[m365]'`. It reuses an
+existing MSAL login (a confidential client with a persisted token cache) and
+never starts a login itself:
+
+```json
+{
+  "m365": {
+    "config_env": "~/.config/my-tool/config.env",
+    "token_cache": "~/.local/share/my-tool/token_cache.bin",
+    "secret": ["service", "my-tool", "key", "client_secret"]
+  }
+}
+```
+
+`config_env` holds `MS_TENANT_ID` and `MS_CLIENT_ID`; `secret` are the
+`secret-tool lookup` attributes of the client secret. The token needs
+`Calendars.Read`. The calendar (past 12 hours, next 24) is fetched every 5
+minutes while a `calendar_event` trigger is active; a fetch error shows in the
+bar and the last fetched calendar keeps counting.
+
+| Kind | Block | Options |
+|---|---|---|
+| trigger | `calendar_event` | `before` (duration), filters `subject` (part of it), `online`, `with_others`, `skip_show_as` (default `free`, `oof`) |
+| action | `calendar_now` | `fallback`, same filters; outputs the `subject` of the item happening now, never fails |
+
+`calendar_event` fires once per item at `start − before`, or right away when
+that moment passed but the item has not started; it fires again when the item
+moves. Cancelled and all-day items never count.
+
 ## CLI
 
 | Command | What it does |
@@ -91,6 +127,7 @@ automations stay.
 | `omamation trace <id>` | the last run, step by step |
 | `omamation daemon [--dry-run]` | the engine; dry run only writes traces |
 | `omamation setup [--remove]` | user service and bar widget |
+| `omamation m365 events` | the calendar items the m365 integration sees |
 | `omamation skill install [--dir <skills>]` | link the agent skill into `~/.claude/skills` (follows updates) |
 
 Every command takes `--json`, exits 0 or 1, and prints errors on stderr.

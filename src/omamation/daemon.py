@@ -130,7 +130,8 @@ class Daemon:
                 entry.update(name=automation_id, status="invalid", enabled=False,
                              problem=self.problems.get(automation_id, ""))
             automations.append(entry)
-        errors = [e for e in [self.services.microphone.error] if e]
+        sources = [self.services.microphone, *self.services.sources.values()]
+        errors = [s.error for s in sources if getattr(s, "error", "")]
         failed = any(a.get("last_result") and a["last_result"]["result"] == "failed" for a in automations)
         return {
             "daemon": {"pid": os.getpid(), "started": self.started, "dry_run": self.dry_run, "errors": errors},
@@ -197,6 +198,8 @@ class Daemon:
             for task in self.running.values():
                 task.cancel()
             await self.services.microphone.stop()
+            for source in self.services.sources.values():
+                await source.stop()
             server.close()
             socket.unlink(missing_ok=True)
             paths.state_file().unlink(missing_ok=True)

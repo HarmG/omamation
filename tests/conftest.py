@@ -84,6 +84,7 @@ def dirs(tmp_path, monkeypatch):
     monkeypatch.setenv("OMAMATION_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("OMAMATION_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("OMAMATION_RUNTIME_DIR", str(tmp_path / "run"))
+    monkeypatch.setenv("OMAMATION_CONFIG_DIR", str(tmp_path / "config"))
     return tmp_path
 
 

@@ -11,6 +11,9 @@ license = "MIT"
 requires-python = ">=3.11"
 dependencies = ["jsonschema>=4"]
 
+[project.optional-dependencies]
+m365 = ["msal>=1.20", "msal-extensions>=1.0"]
+
 [project.scripts]
 omamation = "omamation.cli:main"
 

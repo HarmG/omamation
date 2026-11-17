@@ -254,6 +254,23 @@ def cmd_skill(args):
     out(args, {"installed": str(target), "linked": not args.copy}, f"{how} the skill at {target}.")
 
 
+def cmd_m365_events(args):
+    from .integrations.m365 import CalendarSource, IntegrationError
+
+    try:
+        events = asyncio.run(CalendarSource().refresh())
+    except IntegrationError as exc:
+        raise Failure(str(exc)) from exc
+    rows = [{**e, "start": e["start"].isoformat(timespec="minutes") if e["start"] else None,
+             "end": e["end"].isoformat(timespec="minutes") if e["end"] else None} for e in events]
+    lines = []
+    for e in rows:
+        flags = [f for f, on in (("teams", e["online"]), (f"{e['others']} others", True), (e["show_as"], True),
+                                 ("cancelled", e["cancelled"]), ("all day", e["all_day"])) if on]
+        lines.append(f"{(e['start'] or '')[:16].replace('T', ' ')}  {e['subject']}  ({', '.join(flags)})")
+    out(args, rows, "\n".join(lines) or "No calendar items in the next 24 hours.")
+
+
 # ------------------------------------------------------------------- parser
 
 
@@ -295,6 +312,11 @@ def parser() -> argparse.ArgumentParser:
     c = command("setup", cmd_setup, "install the user service and link the bar widget")
     c.add_argument("--remove", action="store_true")
     c.add_argument("--dry-run", action="store_true", help="install the service in dry-run mode")
+    m365 = command("m365", None, "integration m365 (Outlook calendar)")
+    m365_sub = m365.add_subparsers(dest="m365_command", required=True)
+    events = m365_sub.add_parser("events", help="the calendar items the integration sees (past 12 h, next 24 h)")
+    events.add_argument("--json", action="store_true")
+    events.set_defaults(func=cmd_m365_events)
     skill = command("skill", None, "agent skill")
     skill_sub = skill.add_subparsers(dest="skill_command", required=True)
     install = skill_sub.add_parser("install", help="install the agent skill")

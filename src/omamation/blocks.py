@@ -35,6 +35,7 @@ class Services:
     export_poll: float = 3.0
     clock: Callable[[], datetime] = datetime.now     # local time, without a time zone
     schedule_tick: float = 30.0                      # seconds between schedule checks
+    sources: dict = field(default_factory=dict)      # shared sources of integrations, by name
 
 
 # --------------------------------------------------------------------------- triggers
@@ -516,12 +517,18 @@ TRIGGERS = {cls.type: cls() for cls in (MicrophoneInUse, MicrophoneReleased, Sch
 CONDITIONS = {cls.type: cls() for cls in (WindowOpen, VoxtypeMeeting, NotRanToday)}
 ACTIONS = {cls.type: cls() for cls in (RunCommand, Notify, VoxtypeMeetingStart, VoxtypeMeetingStop)}
 
+from .integrations import register  # noqa: E402 - integrations build on the classes above
+
+register(TRIGGERS, CONDITIONS, ACTIONS)
+
 
 def catalogue() -> dict:
     """Every block with its manifest, for `omamation blocks` and agents."""
 
     def describe(block, kind):
         entry = {"type": block.type, "kind": kind, "description": block.description, "options": block.options}
+        if getattr(block, "integration", None):
+            entry["integration"] = block.integration
         if getattr(block, "outputs", None):
             entry["outputs"] = block.outputs
         if kind == "action":

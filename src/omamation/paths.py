@@ -17,6 +17,12 @@ def data_dir() -> Path:
     return Path(override) if override else _xdg("XDG_DATA_HOME", ".local/share") / "omamation"
 
 
+def config_dir() -> Path:
+    """Settings of integrations."""
+    override = os.environ.get("OMAMATION_CONFIG_DIR")
+    return Path(override) if override else _xdg("XDG_CONFIG_HOME", ".config") / "omamation"
+
+
 def state_dir() -> Path:
     """Traces of past runs."""
     override = os.environ.get("OMAMATION_STATE_DIR")
