@@ -1,0 +1,3 @@
+singleton OmamationStore 1.0 OmamationStore.qml
+PlainLabel 1.0 PlainLabel.qml
+OmamationContent 1.0 OmamationContent.qml

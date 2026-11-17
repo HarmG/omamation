@@ -43,6 +43,7 @@ class Daemon:
         for stop in self.stops:
             stop()
         self.stops, self.loaded, self.problems = [], {}, {}
+        active = 0
         for automation_id in self.store.ids():
             try:
                 doc = self.store.get(automation_id)
@@ -57,11 +58,12 @@ class Daemon:
                 continue
             self.loaded[automation_id] = doc
             if doc.get("enabled", True) and self.store.approved(doc):
+                active += 1
                 for step in doc["triggers"]:
                     self.stops.append(TRIGGERS[step["trigger"]].start(
                         step.get("with", {}), self.services, self._fire_for(automation_id, step)))
         self.signature = self._scan_signature()
-        log.info("loaded %d automations (%d active)", len(self.loaded), len(self.stops))
+        log.info("loaded %d automations (%d active)", len(self.loaded), active)
         self.write_state()
 
     def _fire_for(self, automation_id: str, step: dict):

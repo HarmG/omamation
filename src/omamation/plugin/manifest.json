@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "omamation",
+  "name": "Omamation",
+  "version": "0.1.0",
+  "author": "HarmG",
+  "description": "Your Omamation automations in the bar: on/off, Run now, last run and what each one does. The icon turns red when a run failed or something needs approval.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Omamation",
+    "description": "Automations: status, on/off, Run now, Approve",
+    "category": "Productivity",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
