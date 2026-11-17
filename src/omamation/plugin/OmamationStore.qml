@@ -4,13 +4,9 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// All Omamation state, shared by every bar copy of the widget. The daemon
-// rewrites $XDG_RUNTIME_DIR/omamation/state.json after every change; this
-// store only reads that file and runs the omamation CLI for actions, so the
-// widget never changes an automation itself.
-//
-// Note: plugin hot-reload does not recreate this singleton; changes to this
-// file only take effect after `omarchy restart shell`.
+// Shared state for every bar copy of the widget: reads
+// $XDG_RUNTIME_DIR/omamation/state.json and runs the omamation CLI for actions.
+// Changes to this singleton load after `omarchy restart shell`.
 Singleton {
   id: root
 
@@ -51,7 +47,7 @@ Singleton {
     }
   }
 
-  // run / enable / disable / approve: one at a time; the daemon rewrites the state afterwards.
+  // Run one CLI command (run, enable, disable, approve) at a time.
   function change(args, doneMessage) {
     if (changeProc.running) return false
     root.busy = true
@@ -71,8 +67,7 @@ Singleton {
     onLoadFailed: root.read("")
   }
 
-  // The daemon replaces the file on every write; reading again now and then
-  // also notices a daemon that stopped and removed it.
+  // Read the state file again every 15 seconds.
   Timer {
     interval: 15000
     running: true

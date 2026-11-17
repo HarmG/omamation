@@ -1,9 +1,7 @@
 """The engine: watches triggers of approved, enabled automations and runs them.
 
-The CLI and the bar widget talk to it over a unix socket in the runtime
-directory (not a TCP port, which any web page in a browser could reach).
-The widget reads `state.json`, which the daemon rewrites after every change.
-"""
+Listens on a unix socket in the runtime directory for the CLI, and rewrites
+`state.json` there for the bar widget after every change."""
 
 import asyncio
 import json
@@ -79,7 +77,7 @@ class Daemon:
             raise StoreError(f"no valid automation {automation_id!r}")
         if not self.store.approved(doc):
             raise StoreError(f"{automation_id} is not approved; approve it in the bar first")
-        # Run mode single: a trigger that fires during a run is ignored.
+        # Ignore the trigger when this automation is already running.
         if automation_id in self.running:
             log.info("%s is already running; trigger %s ignored", automation_id, trigger.get("id"))
             return "already running"
@@ -187,8 +185,7 @@ class Daemon:
                 try:
                     await asyncio.wait_for(stop.wait(), RESCAN_SECONDS)
                 except asyncio.TimeoutError:
-                    # Files changed outside the CLI (an agent, an editor): load them again,
-                    # so a changed automation loses its approval right away.
+                    # Reload when automation files or approvals changed on disk.
                     if self._scan_signature() != self.signature:
                         self.reload()
                     else:

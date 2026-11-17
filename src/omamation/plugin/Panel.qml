@@ -3,9 +3,8 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 
-// Omamation bar widget: a bolt glyph, red when a run failed, an automation
-// waits for approval, or the daemon is not running. Clicking opens the list
-// of automations. All state lives in OmamationStore.
+// Bar widget: a bolt glyph, red when a run failed, an automation waits for
+// approval, or the daemon is not running. Clicking opens the automations list.
 Panel {
   id: root
 
@@ -43,7 +42,7 @@ Panel {
     tooltipText: root.tooltip()
     hasVisualContent: true
 
-    // Drawn as a direct child so the bar does not rescale the icon group.
+    // Icon drawn as a direct child of the button.
     Item {
       anchors.fill: parent
       scale: button.pressScale

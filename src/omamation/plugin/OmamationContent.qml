@@ -4,10 +4,8 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 
-// Popup body: every automation with on/off, its last run, Run now, and the
-// readable view of what it does (when / if / do / on error). Concepts are
-// red with an Approve button, which asks for approval with a notification.
-// Nothing here edits an automation; that is the job of the CLI and agents.
+// Popup body: every automation with on/off, last run, Approve (for concepts),
+// Run now, and its steps as readable rows (when / if / do / on error).
 Item {
   id: root
 
@@ -173,7 +171,7 @@ Item {
             text: card.a.problem || ""
           }
 
-          // The readable view: the same rows `omamation show` prints.
+          // Steps as readable rows.
           ColumnLayout {
             visible: root.expanded === card.a.id
             Layout.fillWidth: true

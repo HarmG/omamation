@@ -152,7 +152,7 @@ def cmd_approve(args):
         subprocess.run(["omarchy-notification-send", "--app-name", "Omamation", f"Approved {args.id}"], check=False)
         out(args, {"approved": args.id}, f"Approved {args.id}.")
         return
-    # Approval is a click in a notification: an agent can ask for it, only a person can give it.
+    # Show a notification whose Approve button runs this command again with a one-time token.
     doc = store.get(args.id)
     token = store.request_approval(args.id)
     result = subprocess.run([
@@ -248,7 +248,7 @@ def cmd_skill(args):
         (target / "SKILL.md").write_text(source.joinpath("SKILL.md").read_text())
         how = "Copied"
     else:
-        # A link follows the installed package, so the skill always matches this version.
+        # Link the skill folder of the installed package.
         target.symlink_to(source)
         how = "Linked"
     out(args, {"installed": str(target), "linked": not args.copy}, f"{how} the skill at {target}.")

@@ -1,8 +1,4 @@
-"""Reading and checking automations.
-
-`validate` is the single gate: the CLI, the daemon and agents all go through
-it, so nothing runs that the editor could not show.
-"""
+"""Reading and checking automations against the schema and the block manifests."""
 
 import json
 from importlib import resources
@@ -36,7 +32,7 @@ def default_on_error() -> list[dict]:
 
 
 def with_defaults(doc: dict) -> dict:
-    """Make the implicit explicit, so the file shows what will happen."""
+    """Fill in schema_version, enabled, conditions and the default on_error when missing."""
     doc = json.loads(json.dumps(doc))
     doc.setdefault("schema_version", SCHEMA_VERSION)
     doc.setdefault("enabled", True)
@@ -104,7 +100,6 @@ def validate(doc: dict) -> list[str]:
     catch_earlier = list(earlier)
     for i, step in enumerate(doc.get("on_error", [])):
         check_step(f"on_error/{i}", step, ACTIONS, "action")
-        # In the catch, earlier steps may not have run; their references resolve only if they did.
         check_references(f"on_error/{i}", step, catch_earlier, in_catch=True)
         catch_earlier.append(step["id"])
     return problems

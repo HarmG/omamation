@@ -1,12 +1,7 @@
 """The automations on disk, their approvals, and their history.
 
-The data folder is a git repository: every save, approval and switch is a
-commit, so any change (also one by an agent) can be looked up and undone.
-
-An automation only runs once its owner approved exactly this content. The
-approval is a hash of the automation without `enabled`, so switching it on
-or off keeps the approval, and any other change takes it away.
-"""
+Saves automations as JSON files in a git repository (one commit per change)
+and keeps approvals as a hash of each automation without `enabled`."""
 
 import hashlib
 import json

@@ -1,7 +1,7 @@
 import QtQuick
 import qs.Commons
 
-// Text that never interprets markup: titles and URLs are typed by the user.
+// Plain-text label that does not interpret markup.
 Text {
   property bool muted: false
 

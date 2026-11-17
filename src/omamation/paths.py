@@ -1,8 +1,6 @@
 """Where Omamation keeps its files, following the XDG base directories.
 
-Every location can be overridden with an environment variable, which the
-tests use to work in temporary directories.
-"""
+Each location can be overridden with an environment variable."""
 
 import os
 from pathlib import Path

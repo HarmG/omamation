@@ -1,10 +1,7 @@
 """The built-in blocks: triggers, conditions and actions.
 
-Every block has a manifest: what it does, the options it takes (as JSON
-Schema), what it returns, and whether it is safe to run twice (`retry_safe`).
-The engine validates each step against its block's options before it saves
-an automation, so the editor and agents can only build what a block accepts.
-"""
+Each block has a manifest: a description, its options as JSON Schema, its
+outputs, and for actions `retry_safe` and a default timeout."""
 
 import asyncio
 import json
@@ -110,7 +107,7 @@ def parse_source_outputs(outputs_json: str, sources_json: str) -> set[str]:
 
 
 def _matches(apps: set[str], prefix: str) -> str | None:
-    # Browsers name their stream after themselves plus a suffix ("Chromium input").
+    # Return the first app whose name starts with the prefix ("Chromium" matches "Chromium input").
     for app in sorted(apps):
         if app.lower().startswith(prefix.lower()):
             return app
@@ -151,7 +148,7 @@ class _HeldMicrophone(Trigger):
             app = _matches(apps, options["app"])
             if app:
                 state["seen"], state["app"] = True, app
-            # "released" only means something after the app had the microphone.
+            # Start the hold timer when the wanted state begins; cancel it when the state ends.
             wanted = bool(app) if self.want_present else (not app and state["seen"])
             if wanted and state["timer"] is None:
                 state["timer"] = asyncio.create_task(wait_and_fire())
@@ -275,7 +272,6 @@ class RunCommand(Action):
         "properties": {"command": {"type": "array", "minItems": 1, "items": {"type": "string"}}},
     }
     outputs = {"exit_code": "exit code", "stdout": "standard output", "stderr": "error output"}
-    # A command can do anything, so running it twice is not assumed to be safe.
     retry_safe = False
 
     async def run(self, options, services, run_info=None):
@@ -344,7 +340,7 @@ class VoxtypeMeetingStart(Action):
     outputs = {"title": "title of the recording"}
 
     async def run(self, options, services, run_info=None):
-        # Safe to repeat: a recording that is already running counts as started.
+        # Return without starting when a recording is already running.
         if await voxtype_meeting_state(services) == "recording":
             return {"title": options.get("title", ""), "already_recording": True}
         title = options.get("title") or f"Meeting {datetime.now():%Y-%m-%d %H:%M}"
@@ -363,7 +359,6 @@ class VoxtypeMeetingStop(Action):
         "properties": {"folder": {"type": "string", "description": "Where the transcript goes (default ~/Meetings)"}},
     }
     outputs = {"file": "path of the saved transcript"}
-    # A second stop has nothing to stop, so it is not retried by default.
     retry_safe = False
     default_timeout = "150s"
 
@@ -376,8 +371,7 @@ class VoxtypeMeetingStop(Action):
         folder = Path(options["folder"]).expanduser() if options.get("folder") else services.meetings_dir
         folder.mkdir(parents=True, exist_ok=True)
         target = folder / f"{datetime.now():%Y-%m-%d_%H%M}.md"
-        # Voxtype still transcribes the last chunks after a stop; the export is
-        # empty until it has, so try until there are words (the step timeout ends it).
+        # Export the latest meeting every few seconds until the file contains words.
         while True:
             await asyncio.sleep(services.export_poll)
             export = await services.system.run(

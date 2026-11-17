@@ -1,8 +1,7 @@
 """Running one automation: conditions, then the actions as a try, on_error as the catch.
 
-Every run leaves a trace: which trigger fired, what each condition saw, what
-each step got and returned, and where it failed.
-"""
+Writes a trace per run: the trigger, each condition, each step's input,
+output and error."""
 
 import asyncio
 import json
@@ -23,7 +22,7 @@ TRACE_DAYS = 30
 
 
 def mask(value):
-    """Values under names that look like secrets never reach a trace."""
+    """Replace values under secret-looking keys with *** and shorten long strings."""
     if isinstance(value, dict):
         return {k: "***" if SECRET_KEY.search(k) else mask(v) for k, v in value.items()}
     if isinstance(value, list):
@@ -89,7 +88,7 @@ async def execute(doc: dict, trigger: dict, services: Services, dry_run: bool = 
 
 
 async def _conditions(run: Run, services: Services) -> tuple[bool, dict | None]:
-    """(passed, failure): a condition that cannot be checked is a failure, not a no."""
+    """Check the conditions in order; returns (passed, failure), failure when a check could not run."""
     for step in run.doc.get("conditions", []):
         entry = {"id": step["id"], "condition": step["condition"], "started": now_iso()}
         run.trace["conditions"].append(entry)
@@ -117,7 +116,7 @@ async def _steps(run: Run, steps: list[dict], services: Services, dry_run: bool,
             if not dry_run:
                 entry.update(status="failed", error=str(exc), finished=now_iso())
                 return {"step": step["id"], "message": str(exc)}
-            # In a dry run earlier steps returned nothing; show the references as written.
+            # Dry run: keep the options unresolved when an earlier step has no output.
             options = step.get("with", {})
         entry["input"] = mask(options)
         if dry_run:

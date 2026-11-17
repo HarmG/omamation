@@ -1,10 +1,8 @@
 """Durations and references.
 
-A reference is `{{ steps.<id>.<field> }}`, `{{ trigger.<field> }}`,
-`{{ error.<field> }}` or `{{ automation.<field> }}`. There is no expression
-language on purpose: anything that computes is an action of its own, so the
-editor can show every step.
-"""
+Parses durations (`20s`, `5m`, `1h`) and fills in references:
+`{{ steps.<id>.<field> }}`, `{{ trigger.<field> }}`, `{{ error.<field> }}`
+and `{{ automation.<field> }}`."""
 
 import re
 

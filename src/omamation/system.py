@@ -1,8 +1,4 @@
-"""The outside world: every external command Omamation runs goes through here.
-
-Blocks never start processes themselves. They ask a `System`, so the tests can
-hand them a fake one and nothing on the desktop is touched.
-"""
+"""Runs external commands for the blocks; tests replace it with a fake."""
 
 import asyncio
 from dataclasses import dataclass
@@ -33,7 +29,7 @@ class System:
         try:
             out, err = await asyncio.wait_for(proc.communicate(), timeout)
         except (asyncio.TimeoutError, asyncio.CancelledError):
-            # A step that times out or is cancelled must not leave its process behind.
+            # Kill the process when the call times out or is cancelled.
             proc.kill()
             await proc.wait()
             raise
