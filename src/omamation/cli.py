@@ -232,7 +232,7 @@ def cmd_setup(args):
     subprocess.run(["systemctl", "--user", "restart", UNIT_NAME], check=True)
     out(args, {"unit": str(unit), "plugin": str(plugin_link)},
         f"Service {UNIT_NAME} started{' in dry-run mode' if args.dry_run else ''}.\n"
-        f"Bar widget linked at {plugin_link}; add it to the bar under Setup > Bar, or restart the shell.")
+        f"Bar widget linked at {plugin_link}. Not in the bar yet? Run: omarchy bar put omamation")
 
 
 def cmd_skill(args):
