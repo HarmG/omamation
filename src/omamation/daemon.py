@@ -59,7 +59,8 @@ class Daemon:
                 active += 1
                 for step in doc["triggers"]:
                     self.stops.append(TRIGGERS[step["trigger"]].start(
-                        step.get("with", {}), self.services, self._fire_for(automation_id, step)))
+                        step.get("with", {}), self.services, self._fire_for(automation_id, step),
+                        key=f"{automation_id}/{step['id']}"))
         self.signature = self._scan_signature()
         log.info("loaded %d automations (%d active)", len(self.loaded), active)
         self.write_state()

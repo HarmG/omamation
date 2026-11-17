@@ -7,10 +7,12 @@ import asyncio
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Awaitable, Callable
 
+from . import paths
+from .paths import write_atomic
 from .system import System
 from .values import seconds
 
@@ -31,6 +33,8 @@ class Services:
     notify_command: list[str] = field(default_factory=lambda: ["omarchy-notification-send"])
     meetings_dir: Path = Path.home() / "Meetings"
     export_poll: float = 3.0
+    clock: Callable[[], datetime] = datetime.now     # local time, without a time zone
+    schedule_tick: float = 30.0                      # seconds between schedule checks
 
 
 # --------------------------------------------------------------------------- triggers
@@ -120,8 +124,8 @@ class Trigger:
     options: dict = {"type": "object", "additionalProperties": False}
     outputs: dict = {}
 
-    def start(self, options: dict, services: Services, fire: Fire) -> Callable[[], None]:
-        """Begin watching; returns a function that stops it."""
+    def start(self, options: dict, services: Services, fire: Fire, key: str = "") -> Callable[[], None]:
+        """Begin watching; returns a function that stops it. `key` is `<automation>/<step id>`."""
         return lambda: None
 
 
@@ -140,7 +144,7 @@ class _HeldMicrophone(Trigger):
     outputs = {"app": "the matching app name"}
     want_present = True
 
-    def start(self, options, services, fire):
+    def start(self, options, services, fire, key=""):
         hold = seconds(options.get("for", "0s"))
         state = {"seen": False, "timer": None, "app": None}
 
@@ -187,6 +191,109 @@ class MicrophoneReleased(_HeldMicrophone):
     want_present = False
 
 
+DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+SCHEDULE_GRACE = timedelta(minutes=2)
+
+
+def _schedule_file() -> Path:
+    return paths.state_dir() / "schedule.json"
+
+
+def _last_fired(key: str) -> datetime | None:
+    try:
+        value = json.loads(_schedule_file().read_text()).get(key)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    return datetime.fromisoformat(value) if value else None
+
+
+def _set_last_fired(key: str, when: datetime):
+    try:
+        data = json.loads(_schedule_file().read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+    data[key] = when.isoformat(timespec="seconds")
+    write_atomic(_schedule_file(), json.dumps(data, indent=2, sort_keys=True) + "\n")
+
+
+def latest_slot(options: dict, now: datetime) -> datetime | None:
+    """The most recent `at` time on an allowed day at or before `now`, looking back a week."""
+    days = {DAYS.index(d) for d in options.get("days", DAYS)}
+    times = sorted(options["at"], reverse=True)
+    for back in range(8):
+        day = (now - timedelta(days=back)).date()
+        if day.weekday() not in days:
+            continue
+        for at in times:
+            hour, minute = map(int, at.split(":"))
+            slot = datetime(day.year, day.month, day.day, hour, minute)
+            if slot <= now:
+                return slot
+    return None
+
+
+class Schedule(Trigger):
+    type = "schedule"
+    description = "At set times on set days, or every so often"
+    options = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "days": {"type": "array", "minItems": 1, "uniqueItems": True, "items": {"enum": DAYS},
+                     "description": "Days it may fire (default every day)"},
+            "at": {"type": "array", "minItems": 1, "uniqueItems": True,
+                   "items": {"type": "string", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$"},
+                   "description": "Times of day, HH:MM"},
+            "every": {**DURATION_SCHEMA, "description": "Interval between runs"},
+            "first_after": {**DURATION_SCHEMA, "description": "With every: first run this long after the engine starts (default: every)"},
+            "missed": {"enum": ["skip", "catch_up"],
+                       "description": "A time missed by more than 2 minutes (laptop asleep or off): skip it, or run once when back"},
+        },
+        "oneOf": [{"required": ["at"]}, {"required": ["every"]}],
+        "dependentRequired": {"first_after": ["every"]},
+    }
+    outputs = {"slot": "the planned time (YYYY-MM-DD HH:MM)", "missed": "true when it runs late for a missed time"}
+
+    def start(self, options, services, fire, key=""):
+        catch_up = options.get("missed", "skip") == "catch_up"
+        started = services.clock()
+        # Without an earlier record, a time within the grace period still fires.
+        if _last_fired(key) is None and "at" in options:
+            _set_last_fired(key, started - SCHEDULE_GRACE)
+
+        def due(now: datetime) -> tuple[datetime | None, datetime | None]:
+            """The slot to handle now (or None), and what to record as last fired."""
+            last = _last_fired(key)
+            if "at" in options:
+                slot = latest_slot(options, now)
+                return (slot, slot) if slot and (last is None or slot > last) else (None, None)
+            every = timedelta(seconds=seconds(options["every"]))
+            slot = last + every if last else started + timedelta(seconds=seconds(options.get("first_after", options["every"])))
+            if now < slot:
+                return None, None
+            if now - slot <= SCHEDULE_GRACE or catch_up:
+                return slot, now
+            # Skip: move to the last point of the interval grid that is not in the future.
+            behind = (now - slot) // every
+            return None, slot + behind * every
+
+        async def tick():
+            while True:
+                now = services.clock()
+                slot, record = due(now)
+                if record is not None:
+                    _set_last_fired(key, record)
+                    late = slot is not None and now - slot > SCHEDULE_GRACE
+                    if slot is not None and (not late or catch_up):
+                        result = fire({"slot": slot.strftime("%Y-%m-%d %H:%M"), "missed": late})
+                        if asyncio.iscoroutine(result):
+                            await result
+                await asyncio.sleep(services.schedule_tick)
+
+        task = asyncio.create_task(tick())
+        return task.cancel
+
+
 class Manual(Trigger):
     type = "manual"
     description = "Started by hand: Run now in the bar, `omamation run`, or a notification button"
@@ -200,7 +307,7 @@ class Condition:
     description = ""
     options: dict = {"type": "object", "additionalProperties": False}
 
-    async def check(self, options: dict, services: Services) -> tuple[bool, str]:
+    async def check(self, options: dict, services: Services, run_info: dict | None = None) -> tuple[bool, str]:
         raise NotImplementedError
 
 
@@ -214,7 +321,7 @@ class WindowOpen(Condition):
         "properties": {"class": {"type": "string", "minLength": 1}},
     }
 
-    async def check(self, options, services):
+    async def check(self, options, services, run_info=None):
         result = await services.system.run(["hyprctl", "clients", "-j"], timeout=5)
         if result.code != 0:
             raise StepFailed(f"hyprctl failed: {result.stderr.strip() or result.code}")
@@ -242,9 +349,30 @@ class VoxtypeMeeting(Condition):
         "properties": {"state": {"enum": ["idle", "recording"]}},
     }
 
-    async def check(self, options, services):
+    async def check(self, options, services, run_info=None):
         state = await voxtype_meeting_state(services)
         return state == options["state"], f"voxtype meeting is {state}"
+
+
+class NotRanToday(Condition):
+    type = "not_ran_today"
+    description = "This automation has not had a successful run today"
+
+    async def check(self, options, services, run_info=None):
+        if not run_info:
+            raise StepFailed("not_ran_today needs the automation it belongs to")
+        today = services.clock().date()
+        folder = paths.traces_dir() / run_info["automation"]
+        for path in sorted(folder.glob("*.json"), reverse=True) if folder.exists() else []:
+            try:
+                trace = json.loads(path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            if trace.get("dry_run") or trace.get("result") != "success":
+                continue
+            if datetime.fromisoformat(trace["started"]).date() == today:
+                return False, f"already ran successfully today ({trace['run_id']})"
+        return True, "no successful run today"
 
 
 # --------------------------------------------------------------------------- actions
@@ -384,8 +512,8 @@ class VoxtypeMeetingStop(Action):
 
 # --------------------------------------------------------------------------- registry
 
-TRIGGERS = {cls.type: cls() for cls in (MicrophoneInUse, MicrophoneReleased, Manual)}
-CONDITIONS = {cls.type: cls() for cls in (WindowOpen, VoxtypeMeeting)}
+TRIGGERS = {cls.type: cls() for cls in (MicrophoneInUse, MicrophoneReleased, Schedule, Manual)}
+CONDITIONS = {cls.type: cls() for cls in (WindowOpen, VoxtypeMeeting, NotRanToday)}
 ACTIONS = {cls.type: cls() for cls in (RunCommand, Notify, VoxtypeMeetingStart, VoxtypeMeetingStop)}
 
 

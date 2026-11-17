@@ -94,7 +94,8 @@ async def _conditions(run: Run, services: Services) -> tuple[bool, dict | None]:
         run.trace["conditions"].append(entry)
         try:
             options = resolve(step.get("with", {}), run.context)
-            passed, detail = await CONDITIONS[step["condition"]].check(options, services)
+            passed, detail = await CONDITIONS[step["condition"]].check(
+                options, services, {"automation": run.doc["id"], "run_id": run.id})
         except (StepFailed, CommandMissing, MissingReference, OSError, ValueError) as exc:
             entry.update(passed=False, detail=f"could not check: {exc}")
             return False, {"step": step["id"], "message": str(exc)}

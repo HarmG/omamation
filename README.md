@@ -52,6 +52,10 @@ automations stay.
 - **Traces.** Every run is kept for 30 days in `~/.local/state/omamation/traces`.
   `omamation trace <id>` shows what each condition saw and each step did.
 - **Run mode single.** A trigger that fires while the automation runs is ignored.
+- **Schedules survive restarts.** The last time each `schedule` trigger fired is
+  kept in `~/.local/state/omamation/schedule.json`, so a restart does not fire it
+  twice. A time missed by more than 2 minutes (asleep, off) is skipped, or run
+  once when back with `missed: catch_up`.
 - The CLI and the widget talk to the daemon over a unix socket in
   `$XDG_RUNTIME_DIR/omamation/`, never a TCP port.
 
@@ -61,9 +65,11 @@ automations stay.
 |---|---|---|
 | trigger | `microphone_in_use` | `app` (start of the PipeWire app name), `for` |
 | trigger | `microphone_released` | `app`, `for` |
+| trigger | `schedule` | `at` (`["HH:MM"]`) or `every` (with `first_after`), `days` (`mon`..`sun`), `missed`: `skip` or `catch_up` |
 | trigger | `manual` | — (Run now, `omamation run`, a notification button) |
 | condition | `window_open` | `class` (Hyprland window class) |
 | condition | `voxtype_meeting` | `state`: `idle` or `recording` |
+| condition | `not_ran_today` | — (no successful run of this automation today) |
 | action | `run_command` | `command` (argv list) |
 | action | `notify` | `title`, `body`, `urgency`, `buttons` (`run` an automation, or `trace`) |
 | action | `voxtype_meeting_start` | `title` |

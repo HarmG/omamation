@@ -5,13 +5,13 @@ and keeps approvals as a hash of each automation without `enabled`."""
 
 import hashlib
 import json
-import os
 import secrets
 import subprocess
 import time
 from pathlib import Path
 
 from . import model, paths
+from .paths import write_atomic  # noqa: F401 - used by other modules through store
 
 APPROVAL_REQUEST_SECONDS = 300
 
@@ -23,13 +23,6 @@ class StoreError(Exception):
 def content_hash(doc: dict) -> str:
     body = {k: v for k, v in doc.items() if k not in ("enabled", "$schema")}
     return hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
-
-
-def write_atomic(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(text)
-    os.replace(tmp, path)
 
 
 class Store:

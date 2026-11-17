@@ -42,3 +42,11 @@ def state_file() -> Path:
 
 def traces_dir() -> Path:
     return state_dir() / "traces"
+
+
+def write_atomic(path: Path, text: str):
+    """Write beside the target, then rename over it."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
